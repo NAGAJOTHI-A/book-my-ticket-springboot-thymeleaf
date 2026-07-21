@@ -1,53 +1,73 @@
 package com.jsp.book.util;
 
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestTemplate;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
-
-import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class EmailHelper {
 
-	private static final String FROM_EMAIL = "anagajothi1372004@gmail.com"; // must match APP_USERNAME
-	private static final String FROM_NAME = "Book-My-Ticket";
-	private static final String SUBJECT = "Otp for Creating Account with BookMyTicket";
-	private static final String TEMPLATE = "email-template.html";
+    private final TemplateEngine templateEngine;
+    private final RestTemplate restTemplate = new RestTemplate();
 
-	private final JavaMailSender mailSender;
-	private final TemplateEngine templateEngine;
+    @Value("${brevo.api.key}")
+    private String brevoApiKey;
 
-	@Async
-	public void sendOtp(int otp, String name, String email) {
+    @Value("${brevo.sender.email}")
+    private String fromEmail;
 
-		try {
-			System.out.println("sentotp called");
-			MimeMessage message = mailSender.createMimeMessage();
-			MimeMessageHelper helper = new MimeMessageHelper(message, true);
+    private static final String FROM_NAME = "Book-My-Ticket";
+    private static final String SUBJECT = "Otp for Creating Account with BookMyTicket";
+    private static final String TEMPLATE = "email-template.html";
+    private static final String BREVO_URL = "https://api.brevo.com/v3/smtp/email";
 
-			helper.setFrom(FROM_EMAIL, FROM_NAME);
-			helper.setTo(email);
-			helper.setSubject(SUBJECT);
+    @Async
+    public void sendOtp(int otp, String name, String email) {
+        try {
+            Context context = new Context();
+            context.setVariable("name", name);
+            context.setVariable("otp", otp);
+            String htmlBody = templateEngine.process(TEMPLATE, context);
 
-			Context context = new Context();
-			context.setVariable("name", name);
-			context.setVariable("otp", otp);
+            Map<String, Object> sender = new HashMap<>();
+            sender.put("name", FROM_NAME);
+            sender.put("email", fromEmail);
 
-			String body = templateEngine.process(TEMPLATE, context);
-			System.out.println("sentotp executing..");
-			helper.setText(body, true);
+            Map<String, Object> recipient = new HashMap<>();
+            recipient.put("email", email);
+            recipient.put("name", name);
 
-			mailSender.send(message);
-			System.out.println("sentotp executed");
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("sender", sender);
+            payload.put("to", List.of(recipient));
+            payload.put("subject", SUBJECT);
+            payload.put("htmlContent", htmlBody);
 
-		} catch (Exception ex) {
-			System.err.println("Failed to send OTP mail for email: " + email);
-		    ex.printStackTrace();
-		}
-	}
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("api-key", brevoApiKey);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            HttpEntity<Map<String, Object>> request = new HttpEntity<>(payload, headers);
+            ResponseEntity<String> response = restTemplate.postForEntity(BREVO_URL, request, String.class);
+
+            log.info("OTP mail sent to {}, status: {}", email, response.getStatusCode());
+        } catch (Exception ex) {
+            log.error("Failed to send OTP mail for email: {}", email, ex);
+        }
+    }
 }
