@@ -14,7 +14,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class EmailHelper {
 
-	private static final String FROM_EMAIL = "bookmy-ticket.com";
+	private static final String FROM_EMAIL = "anagajothi1372004@gmail.com"; // must match APP_USERNAME
 	private static final String FROM_NAME = "Book-My-Ticket";
 	private static final String SUBJECT = "Otp for Creating Account with BookMyTicket";
 	private static final String TEMPLATE = "email-template.html";
@@ -47,6 +47,7 @@ public class EmailHelper {
 
 		} catch (Exception ex) {
 			System.err.println("Failed to send OTP mail for email: " + email);
+		    ex.printStackTrace();
 		}
 	}
 }
