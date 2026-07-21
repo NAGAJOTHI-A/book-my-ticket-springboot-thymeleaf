@@ -107,8 +107,10 @@ public class UserServiceImpl implements UserService {
 
 		// OTP generation & persistence
 		int otp = secureRandom.nextInt(100000, 1_000_000);
-
+        
+		System.out.println("otp method calling");
 		emailHelper.sendOtp(otp, userDto.getName(), userDto.getEmail());
+		System.out.println("otp method called and sent otp done");
 		redisService.saveUserDto(userDto.getEmail(), userDto);
 		redisService.saveOtp(userDto.getEmail(), otp);
 

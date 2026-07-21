@@ -26,6 +26,7 @@ public class EmailHelper {
 	public void sendOtp(int otp, String name, String email) {
 
 		try {
+			System.out.println("sentotp called");
 			MimeMessage message = mailSender.createMimeMessage();
 			MimeMessageHelper helper = new MimeMessageHelper(message, true);
 
@@ -38,9 +39,11 @@ public class EmailHelper {
 			context.setVariable("otp", otp);
 
 			String body = templateEngine.process(TEMPLATE, context);
+			System.out.println("sentotp executing..");
 			helper.setText(body, true);
 
 			mailSender.send(message);
+			System.out.println("sentotp executed");
 
 		} catch (Exception ex) {
 			System.err.println("Failed to send OTP mail for email: " + email);
